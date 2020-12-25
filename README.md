@@ -49,5 +49,6 @@ dsw_sp.write_u32(0x5f3759df);
 dsr_sp.data_sequence()->rewind(); // equivalent to sequence_sp->rewind();
 float quakes_magic_number = dsr_sp.read_f32();
 
-// same steps also work for a file sequence by replacing mem_data_seqv with file_data_seqv( "new file_data_seqv(..);" or "std::make_shared<file_data_seqv>(..);" )
+// same steps also work for a file sequence by replacing mem_data_seqv with
+// file_data_seqv( "new file_data_seqv(..);" or "std::make_shared<file_data_seqv>(..);" )
 ```
