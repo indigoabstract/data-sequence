@@ -21,7 +21,7 @@ sequence.rewind();
 float quakes_magic_number = sequence.r.read_f32();
 
 // same steps, but with a file sequence now
-file_data_seqv sequence(std_file_wrapper("test.bin", "wb"));
+file_data_seqv sequence(std_file_wrapper("test.bin", "rwb"));
 sequence.w.write_i32(42);
 sequence.w.write_f32(666.66f);
 sequence.rewind();
