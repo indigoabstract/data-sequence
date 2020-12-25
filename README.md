@@ -5,6 +5,7 @@ It can read/write data in memory/file sequences(streams) and can be extended for
 
 # How to use
 
+```c++
 // write an int and a float to a memory sequence and then read them back
 rw_seqv sequence;
 sequence.w.write_i32(42);
@@ -49,3 +50,4 @@ dsr_sp.data_sequence()->rewind(); // equivalent to sequence_sp->rewind();
 float quakes_magic_number = dsr_sp.read_f32();
 
 // same steps also work for a file sequence by replacing mem_data_seqv with file_data_seqv( "new file_data_seqv(..);" or "std::make_shared<file_data_seqv>(..);" )
+```
