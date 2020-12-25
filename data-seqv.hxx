@@ -177,12 +177,11 @@ class file_data_seqv : public file_data_seqv_base<std_file_wrapper, ref_adapter<
 {
 public:
    file_data_seqv() {}
-   file_data_seqv(const std_file_wrapper& i_file, bool i_is_writable)
+   file_data_seqv(const std_file_wrapper& i_file)
    {
       assert(i_file.is_open());
-      assert((i_is_writable) ? i_file.is_writable() : true);
       file = i_file;
-      is_writable = i_is_writable;
+      is_writable = i_file.is_writable();
    }
    void set_file_wrapper(const std_file_wrapper& i_file) { file = i_file; }
 };
@@ -193,13 +192,12 @@ class file_data_seqv_ptr : public file_data_seqv_base<file_wrapper*, ptr_adapter
 {
 public:
    file_data_seqv_ptr() { file = nullptr; }
-   file_data_seqv_ptr(file_wrapper* i_file, bool i_is_writable)
+   file_data_seqv_ptr(file_wrapper* i_file)
    {
       assert(i_file != nullptr);
       assert(i_file->is_open());
-      assert((i_is_writable) ? i_file->is_writable() : true);
       file = i_file;
-      is_writable = i_is_writable;
+      is_writable = i_file->is_writable();
    }
    void set_file_wrapper(file_wrapper* i_file) { file = i_file; }
 };
@@ -216,7 +214,7 @@ public:
       assert(i_file->is_open());
       assert((i_is_writable) ? i_file->is_writable() : true);
       file = i_file;
-      is_writable = i_is_writable;
+      is_writable = i_file->is_writable();
    }
    void set_file_wrapper(std::shared_ptr<file_wrapper> i_file) { file = i_file; }
 };
@@ -404,10 +402,10 @@ public:
 class rw_file_seqv : public file_data_seqv
 {
 public:
-   rw_file_seqv(const std_file_wrapper& i_file, bool i_is_writable) : file_data_seqv(i_file, i_is_writable)
+   rw_file_seqv(const std_file_wrapper& i_file) : file_data_seqv(i_file)
    {
       r.set_data_sequence(*this);
-      if (i_is_writable) { w.set_data_sequence(*this); }
+      if (i_file.is_writable()) { w.set_data_sequence(*this); }
    }
 
    data_seqv_file_reader r;
