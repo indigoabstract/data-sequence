@@ -24,7 +24,8 @@ sequence.w.write_u32(0x5f3759df);
 sequence.rewind();
 float magic_number = sequence.r.read_f32();
 
-// same steps, but with a file sequence now(and also showing the equivalent template versions for reading/writing)
+// same steps, but with a file sequence now
+// and also showing the equivalent template versions for reading/writing
 rw_file_seqv sequence(std_file_wrapper("test.bin", "w+b"));
 sequence.w.write(42);
 sequence.w.write(666.66f);
