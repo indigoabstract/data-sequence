@@ -250,8 +250,11 @@ public:
    template<class T0> void read_pointer(T0*& i_seqv);
    // seqv data versions. each returns the number of bytes read
    int read_bytes(std::byte* i_seqv, uint32_t i_elem_count, uint32_t i_offset = 0);
-   // reads a sequence that was written with the write_byte_vect() function
-   std::vector<std::byte> read_byte_vect();
+   // reads a vector of bytes of length 'i_elem_count'
+   std::vector<std::byte> read_byte_vect(uint32_t i_elem_count);
+   // reads a sequence that was written with the write_sized_byte_vect() function
+   // it's the same as read_byte_vect(), but the size is read from the sequence
+   std::vector<std::byte> read_sized_byte_vect();
    template<class T0> int read(T0* i_seqv, uint32_t i_elem_count, uint32_t i_offset = 0);
    int read_i8(int8_t* i_seqv, uint32_t i_elem_count, uint32_t i_offset = 0);
    int read_u8(uint8_t* i_seqv, uint32_t i_elem_count, uint32_t i_offset = 0);
@@ -340,9 +343,11 @@ public:
    template<class T0> void write_pointer(T0* const i_seqv);
    // seqv data versions
    void write_bytes(const std::byte* i_seqv, uint32_t i_elem_count, uint32_t i_offset = 0);
-   // same as write_bytes, but also writes in front the number of bytes in the sequence(a 32 bit number)
-   void write_byte_vect(const std::vector<std::byte>& i_seqv) { write_byte_vect(i_seqv.data(), i_seqv.size()); }
-   void write_byte_vect(const std::byte* i_seqv, uint32_t i_elem_count, uint32_t i_offset = 0);
+   // writes a vector of bytes
+   void write_byte_vect(const std::vector<std::byte>& i_seqv) { write_bytes(i_seqv.data(), i_seqv.size()); }
+   // same as write_byte_vect, but also writes in front the number of bytes in the sequence(a 32 bit number)
+   void write_sized_byte_vect(const std::vector<std::byte>& i_seqv) { write_sized_byte_vect(i_seqv.data(), i_seqv.size()); }
+   void write_sized_byte_vect(const std::byte* i_seqv, uint32_t i_elem_count, uint32_t i_offset = 0);
    template<class T0> void write(const T0* i_seqv, uint32_t i_elem_count, uint32_t i_offset = 0);
    void write_i8(const int8_t* i_seqv, uint32_t i_elem_count, uint32_t i_offset = 0);
    void write_u8(const uint8_t* i_seqv, uint32_t i_elem_count, uint32_t i_offset = 0);
@@ -783,13 +788,18 @@ template<class T, class reader> int data_seqv_reader_base<T, reader>::read_bytes
    return reader()(seqv)->read_bytes(i_seqv, i_elem_count, i_offset);
 }
 
-template<class T, class reader> std::vector<std::byte> data_seqv_reader_base<T, reader>::read_byte_vect()
+template<class T, class reader> std::vector<std::byte> data_seqv_reader_base<T, reader>::read_byte_vect(uint32_t i_elem_count)
+{
+   std::vector<std::byte> vect(i_elem_count);
+   int bytes_read = read_bytes(vect.data(), i_elem_count, 0);
+   mws_assert(static_cast<uint32_t>(bytes_read) == i_elem_count);
+   return vect;
+}
+
+template<class T, class reader> std::vector<std::byte> data_seqv_reader_base<T, reader>::read_sized_byte_vect()
 {
    uint32_t size = read_u32();
-   std::vector<std::byte> seqv(size);
-   int bytes_read = read_bytes(seqv.data(), size, 0);
-   mws_assert(bytes_read == size);
-   return seqv;
+   return read_byte_vect(size);
 }
 
 template<class T, class reader> template<class T0> int data_seqv_reader_base<T, reader>::read(T0* i_seqv, uint32_t i_elem_count, uint32_t i_offset)
@@ -888,7 +898,7 @@ template<class T, class writer> void data_seqv_writer_base<T, writer>::write_byt
    writer()(seqv)->write_bytes(i_seqv, i_elem_count, i_offset);
 }
 
-template<class T, class writer> void data_seqv_writer_base<T, writer>::write_byte_vect(const std::byte* i_seqv, uint32_t i_elem_count, uint32_t i_offset)
+template<class T, class writer> void data_seqv_writer_base<T, writer>::write_sized_byte_vect(const std::byte* i_seqv, uint32_t i_elem_count, uint32_t i_offset)
 {
    write_u32(i_elem_count);
    write_bytes(i_seqv, i_elem_count, i_offset);
