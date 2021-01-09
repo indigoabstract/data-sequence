@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
+#include <exception>
 #include <memory>
 #include <vector>
 #include <string>
@@ -41,7 +42,7 @@ public:
    // same as rewind, but also discards the allocated buffers for in memory sequences
    virtual void reset() = 0;
    // sets current reading & writing position
-   virtual void set_io_position(uint64_t i_position) = 0;
+   virtual void set_io_position(uint64_t i_position);
    virtual void set_read_position(uint64_t i_position);
    virtual void set_write_position(uint64_t i_position);
    // returns number of bytes read
@@ -71,6 +72,8 @@ class ro_mem_seqv : public data_seqv
 public:
    ro_mem_seqv();
    ro_mem_seqv(const data_seqv& i_ds);
+   // i_seqv's size must not be modified while referenced by ro_mem_seqv
+   ro_mem_seqv(const std::vector<std::byte>& i_seqv);
    ro_mem_seqv(const std::byte* i_seqv, uint64_t i_elem_count);
    virtual ~ro_mem_seqv();
    virtual const std::byte* data_as_byte_array() const override;
@@ -98,6 +101,7 @@ class mem_data_seqv : public data_seqv
 {
 public:
    mem_data_seqv();
+   mem_data_seqv(const std::vector<std::byte>& i_seqv);
    mem_data_seqv(const std::byte* i_seqv, uint32_t i_elem_count);
    virtual ~mem_data_seqv();
    virtual uint64_t size() const override;
@@ -268,7 +272,6 @@ public:
    int read_f64(double* i_seqv, uint32_t i_elem_count, uint32_t i_offset = 0);
 
 protected:
-
    T seqv;
 };
 
@@ -361,7 +364,6 @@ public:
    void write_f64(const double* i_seqv, uint32_t i_elem_count, uint32_t i_offset = 0);
 
 protected:
-
    T seqv;
 };
 
@@ -482,6 +484,7 @@ public:
    virtual ~dsv_exception();
    // returns a C-style character string describing the general cause of the current error
    virtual const char* what() const noexcept;
+   static void throw_ex(const char* i_msg = "n/a");
 
 private:
    void set_msg(const char* i_msg);
@@ -518,6 +521,7 @@ inline uint64_t data_seqv::read_position() const { return read_position_v; }
 inline uint64_t data_seqv::write_position() const { return write_position_v; }
 inline uint64_t data_seqv::total_bytes_read() const { return total_bytes_read_v; }
 inline uint64_t data_seqv::total_bytes_written() const { return total_bytes_written_v; }
+inline void data_seqv::set_io_position(uint64_t i_position) { read_position_v = write_position_v = i_position; }
 inline void data_seqv::set_read_position(uint64_t i_position) { read_position_v = i_position; }
 inline void data_seqv::set_write_position(uint64_t i_position) { write_position_v = i_position; }
 
@@ -545,6 +549,7 @@ inline int data_seqv::write_bytes(const std::byte* i_seqv, uint32_t i_elem_count
 // ro_mem_seqv
 inline ro_mem_seqv::ro_mem_seqv() {}
 inline ro_mem_seqv::ro_mem_seqv(const data_seqv& i_ds) : seqv(i_ds.data_as_byte_array()), size_v(i_ds.size()) {}
+inline ro_mem_seqv::ro_mem_seqv(const std::vector<std::byte>& i_seqv) : seqv(i_seqv.data()), size_v(i_seqv.size()) {}
 inline ro_mem_seqv::ro_mem_seqv(const std::byte* i_seqv, uint64_t i_elem_count) : seqv(i_seqv), size_v(i_elem_count) {}
 inline ro_mem_seqv::~ro_mem_seqv() {}
 inline const std::byte* ro_mem_seqv::data_as_byte_array() const { return seqv; }
@@ -566,8 +571,8 @@ inline std::vector<std::byte> ro_mem_seqv::data_as_byte_vector() const
    return sq;
 }
 
-inline void ro_mem_seqv::set_read_position(uint64_t i_pos) { if (i_pos > size()) { mws_throw dsv_exception("n/a"); } else { read_position_v = i_pos; } }
-inline void ro_mem_seqv::set_write_position(uint64_t) { mws_throw dsv_exception("n/a"); }
+inline void ro_mem_seqv::set_read_position(uint64_t i_pos) { if (i_pos > size()) { dsv_exception::throw_ex(); } else { read_position_v = i_pos; } }
+inline void ro_mem_seqv::set_write_position(uint64_t) { dsv_exception::throw_ex(); }
 
 inline int ro_mem_seqv::read_bytes_impl(std::byte* i_seqv, uint32_t i_elem_count, uint32_t i_offset)
 {
@@ -582,10 +587,11 @@ inline int ro_mem_seqv::read_bytes_impl(std::byte* i_seqv, uint32_t i_elem_count
    return bytes_to_read;
 }
 
-inline int ro_mem_seqv::write_bytes_impl(const std::byte*, uint32_t, uint32_t) { mws_throw dsv_exception("n/a"); return -1; }
+inline int ro_mem_seqv::write_bytes_impl(const std::byte*, uint32_t, uint32_t) { dsv_exception::throw_ex(); return -1; }
 
 
 // mem_data_seqv
+inline mem_data_seqv::mem_data_seqv(const std::vector<std::byte>& i_seqv) { seqv = i_seqv; }
 inline mem_data_seqv::mem_data_seqv(const std::byte* i_seqv, uint32_t i_elem_count) { seqv.assign(i_seqv, i_seqv + i_elem_count); }
 inline mem_data_seqv::mem_data_seqv() {}
 inline mem_data_seqv::~mem_data_seqv() {}
@@ -595,8 +601,8 @@ inline uint64_t mem_data_seqv::size() const { return seqv.size(); }
 inline void mem_data_seqv::rewind() { set_read_position(0); set_write_position(0); }
 inline void mem_data_seqv::reset() { rewind(); seqv.clear(); }
 inline void mem_data_seqv::set_io_position(uint64_t i_position) { set_read_position(i_position); set_write_position(i_position); }
-inline void mem_data_seqv::set_read_position(uint64_t i_pos) { if (i_pos > size()) { mws_throw dsv_exception("n/a"); } else { read_position_v = i_pos; } }
-inline void mem_data_seqv::set_write_position(uint64_t i_pos) { if (i_pos > size()) { mws_throw dsv_exception("n/a"); } else { write_position_v = i_pos; } }
+inline void mem_data_seqv::set_read_position(uint64_t i_pos) { if (i_pos > size()) { dsv_exception::throw_ex(); } else { read_position_v = i_pos; } }
+inline void mem_data_seqv::set_write_position(uint64_t i_pos) { if (i_pos > size()) { dsv_exception::throw_ex(); } else { write_position_v = i_pos; } }
 
 inline int mem_data_seqv::read_bytes_impl(std::byte* i_seqv, uint32_t i_elem_count, uint32_t i_offset)
 {
@@ -702,7 +708,7 @@ template<class T, class io> int file_data_seqv_base<T, io>::read_bytes_impl(std:
 
    if (bytes_read < 0 || static_cast<uint32_t>(bytes_read) != i_elem_count)
    {
-      mws_throw dsv_exception("reached end of file");
+      dsv_exception::throw_ex("reached end of file");
    }
 
    return bytes_read;
@@ -744,9 +750,10 @@ template<class T, class reader> template<class T0> T0 data_seqv_reader_base<T, r
 
 template<class T, class reader> std::string data_seqv_reader_base<T, reader>::read_text()
 {
+   static_assert(sizeof(std::byte) == sizeof(char));
    uint32_t elem_count = read_u32();
    std::string text(elem_count, 0);
-   read_bytes(byte_cast(text.data()), elem_count, 0);
+   read_bytes(byte_cast(text.data()), elem_count);
 
    return text;
 }
@@ -1048,6 +1055,7 @@ inline dsv_exception::dsv_exception(const std::string& i_msg) { set_msg(i_msg.c_
 inline dsv_exception::dsv_exception(const char* i_msg) { set_msg(i_msg); }
 inline dsv_exception::~dsv_exception() {}
 inline const char* dsv_exception::what() const noexcept { return msg.c_str(); }
+inline void dsv_exception::throw_ex(const char* i_msg) { mws_throw dsv_exception(i_msg); }
 
 inline void dsv_exception::set_msg(const char* i_msg)
 {
