@@ -235,6 +235,7 @@ public:
    virtual ~data_seqv_reader_base();
    T& data_sequence();
    const T& data_sequence() const;
+   bool reached_end_of_sequence();
    // single data versions
    std::byte read_byte();
    char read_char();
@@ -277,6 +278,13 @@ protected:
    T seqv;
 };
 
+
+// ro memory sequence embedded instance version
+class ro_mem_reader : public data_seqv_reader_base<ro_mem_seqv, ref_adapter<data_seqv>>
+{
+public:
+   ro_mem_reader(ro_mem_seqv i_seqv) : data_seqv_reader_base(i_seqv) {}
+};
 
 // ro memory sequence reference version
 class ro_mem_reader_ref : public data_seqv_reader_base<ro_mem_seqv&, ref_adapter<data_seqv>>
@@ -733,6 +741,7 @@ template<class T, class reader> data_seqv_reader_base<T, reader>::data_seqv_read
 template<class T, class reader> data_seqv_reader_base<T, reader>::~data_seqv_reader_base() {}
 template<class T, class reader> T& data_seqv_reader_base<T, reader>::data_sequence() { return seqv; }
 template<class T, class reader> const T& data_seqv_reader_base<T, reader>::data_sequence() const { return seqv; }
+template<class T, class reader> bool data_seqv_reader_base<T, reader>::reached_end_of_sequence() { return reader()(seqv)->reached_end_of_sequence(); }
 template<class T, class reader> std::byte data_seqv_reader_base<T, reader>::read_byte() { return read<std::byte>(); }
 template<class T, class reader> char data_seqv_reader_base<T, reader>::read_char() { return read<char>(); }
 template<class T, class reader> int8_t data_seqv_reader_base<T, reader>::read_i8() { return read<int8_t>(); }
