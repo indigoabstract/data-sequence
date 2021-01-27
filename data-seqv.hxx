@@ -484,9 +484,13 @@ private:
 class dsv_exception
 #ifdef __cpp_exceptions
    : public std::exception
+#if !defined(mws_throw)
 #define mws_throw throw
+#endif
 #else
+#if !defined(mws_throw)
 #define mws_throw
+#endif
 #endif
 {
 public:
@@ -648,10 +652,8 @@ inline std_file_wrapper::std_file_wrapper(const std::string& i_file_path, const 
 {
    const size_t np = std::string::npos;
    is_writable_v = (i_open_mode.find('a') != np) || (i_open_mode.find('w') != np) || (i_open_mode.find('+') != np);
-#pragma warning(push)
 #pragma warning(suppress : 4996)
    std::FILE* f = fopen(i_file_path.c_str(), i_open_mode.c_str());
-#pragma warning(pop)
    if (f) { file_v = std::shared_ptr<std::FILE>(f, std::fclose); }
 }
 
