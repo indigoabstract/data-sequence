@@ -7,6 +7,11 @@ No external dependencies.
 
 # How to use
 
+There are only two concepts used:\
+the first one is the data sequence type, which contains the data, be it in a file, in memory, etc.\
+and the second one is the data handler, i.e. readers and writers, which apply themselves to the data sequences.\
+Examples below:\
+
 ```c++
 #include <data-seqv.hxx>
 
