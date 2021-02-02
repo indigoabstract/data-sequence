@@ -103,6 +103,8 @@ class data_seqv_rw_mem : public data_seqv
 {
 public:
    data_seqv_rw_mem();
+   /** constructs a memory data sequence with its size the specified number of bytes */
+   data_seqv_rw_mem(uint32_t i_elem_count);
    data_seqv_rw_mem(const std::vector<std::byte>& i_seqv);
    data_seqv_rw_mem(const std::byte* i_seqv, uint32_t i_elem_count);
    virtual ~data_seqv_rw_mem();
@@ -114,6 +116,8 @@ public:
    virtual void set_io_position(uint64_t i_position) override;
    virtual void set_read_position(uint64_t i_position) override;
    virtual void set_write_position(uint64_t i_position) override;
+   /** resizes this sequence to the specified number of bytes */
+   virtual void resize(uint32_t i_elem_count);
 
 protected:
    virtual int read_bytes_impl(std::byte* i_seqv, uint32_t i_elem_count, uint32_t i_offset) override;
@@ -392,6 +396,8 @@ class data_seqv_mem_writer : public data_seqv_writer_base<data_seqv_rw_mem, ref_
 {
 public:
    data_seqv_mem_writer() : data_seqv_writer_base(data_seqv_rw_mem()) {}
+   /** constructs a memory data sequence with its size the specified number of bytes */
+   data_seqv_mem_writer(uint32_t i_elem_count) : data_seqv_writer_base(data_seqv_rw_mem()) { dsv().resize(i_elem_count); }
 };
 
 
@@ -614,9 +620,10 @@ inline int data_seqv_ro_mem::write_bytes_impl(const std::byte*, uint32_t, uint32
 
 
 // data_seqv_rw_mem
+inline data_seqv_rw_mem::data_seqv_rw_mem() {}
+inline data_seqv_rw_mem::data_seqv_rw_mem(uint32_t i_elem_count) : seqv(i_elem_count) {}
 inline data_seqv_rw_mem::data_seqv_rw_mem(const std::vector<std::byte>& i_seqv) { seqv = i_seqv; }
 inline data_seqv_rw_mem::data_seqv_rw_mem(const std::byte* i_seqv, uint32_t i_elem_count) { seqv.assign(i_seqv, i_seqv + i_elem_count); }
-inline data_seqv_rw_mem::data_seqv_rw_mem() {}
 inline data_seqv_rw_mem::~data_seqv_rw_mem() {}
 inline const std::byte* data_seqv_rw_mem::seqv_as_array() const { return seqv.data(); }
 inline std::vector<std::byte> data_seqv_rw_mem::seqv_as_vector() const { return seqv; }
@@ -626,6 +633,13 @@ inline void data_seqv_rw_mem::reset() { rewind(); seqv.clear(); }
 inline void data_seqv_rw_mem::set_io_position(uint64_t i_position) { set_read_position(i_position); set_write_position(i_position); }
 inline void data_seqv_rw_mem::set_read_position(uint64_t i_pos) { if (i_pos > size()) { data_seqv_exception::throw_ex(); } else { read_position_v = i_pos; } }
 inline void data_seqv_rw_mem::set_write_position(uint64_t i_pos) { if (i_pos > size()) { data_seqv_exception::throw_ex(); } else { write_position_v = i_pos; } }
+
+inline void data_seqv_rw_mem::resize(uint32_t i_elem_count)
+{
+   seqv.resize(i_elem_count);
+   if (read_position_v >= i_elem_count) { set_read_position(i_elem_count); }
+   if (write_position_v >= i_elem_count) { set_write_position(i_elem_count); }
+}
 
 inline int data_seqv_rw_mem::read_bytes_impl(std::byte* i_seqv, uint32_t i_elem_count, uint32_t i_offset)
 {
