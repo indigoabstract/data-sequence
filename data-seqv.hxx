@@ -751,7 +751,7 @@ inline int data_seqv_rw_mem::read_bytes_impl(std::byte* i_seqv, uint32_t i_elem_
 {
    int bytes_to_read = 0;
 
-   if (read_position() < size())
+   if (i_elem_count > 0 && (read_position() < size()))
    {
       size_t read_pos = static_cast<size_t>(read_position());
 
@@ -764,12 +764,15 @@ inline int data_seqv_rw_mem::read_bytes_impl(std::byte* i_seqv, uint32_t i_elem_
 
 inline int data_seqv_rw_mem::write_bytes_impl(const std::byte* i_seqv, uint32_t i_elem_count, uint32_t i_offset)
 {
-   if (size() - write_position() < i_elem_count)
+   if (i_elem_count > 0)
    {
-      seqv.resize(static_cast<size_t>(size()) + i_elem_count);
-   }
+      if (size() - write_position() < i_elem_count)
+      {
+         seqv.resize(static_cast<size_t>(size()) + i_elem_count);
+      }
 
-   std::memcpy(&seqv[static_cast<size_t>(write_position())], &i_seqv[i_offset], i_elem_count);
+      std::memcpy(&seqv[static_cast<size_t>(write_position())], &i_seqv[i_offset], i_elem_count);
+   }
 
    return i_elem_count;
 }
