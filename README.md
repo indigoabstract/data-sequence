@@ -1,4 +1,4 @@
-# data-sequence-bytebuffer-datastream
+# data-sequence
 
 c++ header-only library for primitive type serialization similar(conceptually) to java's bytebuffer and datastream classes.
 It can read/write data in memory/file sequences(streams) and can be extended for other streams as well.
@@ -60,12 +60,37 @@ There are only two concepts used:
   {
 	 // and shared pointers
 	 std::shared_ptr<data_seqv_rw_mem> sequence_sp = std::make_shared<data_seqv_rw_mem>();
-	 data_seqv_writer_sp dsw_sp(sequence_sp);
-	 data_seqv_reader_sp dsr_sp(sequence_sp);
+	 data_seqv_writer_shr dsw_sp(sequence_sp);
+	 data_seqv_reader_shr dsr_sp(sequence_sp);
 	 dsw_sp.write_u32(0x5f3759df);
 	 dsr_sp.dsv()->rewind(); // equivalent to sequence_sp->rewind();
 	 float magic_number = dsr_sp.read_f32();
   }
   // same steps also work for a file sequence by replacing data_seqv_rw_mem with
   // data_seqv_file( "new data_seqv_file(..);" or "std::make_shared<data_seqv_file>(..);" )
+  {
+	 const uint32_t nr = 0x12345678;
+	 data_seqv_rw_mem_ops seqv;
+	 seqv.w.write_u32(nr);
+	 seqv.w.write(nr);
+	 seqv.rewind();
+	 uint32_t t0 = seqv.r.read_u32();
+	 uint32_t t1 = seqv.r.read<uint32_t>();
+	 seqv.rewind();
+	 uint32_t t2 = seqv.r.read<uint32_t>();
+	 uint32_t t3 = seqv.r.read_u32();
+	 assert(t0 == nr);
+	 assert(t0 == t1);
+	 assert(t0 == t2);
+	 assert(t0 == t3);
+	 seqv.rewind();
+	 seqv.w.write_u32(nr);
+	 seqv.rewind();
+	 float f0 = seqv.r.read_f32();
+	 seqv.rewind();
+	 seqv.w.write_f32(f0);
+	 seqv.rewind();
+	 uint32_t t4 = seqv.r.read_u32();
+	 assert(t0 == t4);
+  }
 ```
