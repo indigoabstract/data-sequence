@@ -164,7 +164,7 @@ protected:
 
    /** size of this sequence */
    uint64_t size_v = 0;
-   /** note: reference only, does not own the memory that it points to */
+   /** note: weak reference only, does not own the memory that it points to */
    const std::byte* seqv_v = nullptr;
 };
 
@@ -389,8 +389,10 @@ public:
    double read_f64();
    /** template method. can read any 'T0' that's a passive data structure(primitive, plain old data structure, etc) */
    template<class T0> T0 read();
-   /** avoid using read_line(), as it's quite slow */
+   /** read_line() should only be used with memory data sequences atm, since reading from disk unbuffered one char at at time is very slow */
    std::string read_line();
+   /** read_line() should only be used with memory data sequences atm, since reading from disk unbuffered one char at at time is very slow */
+   void read_line(std::string& o_text);
    template<class T0> void read_pointer(T0*& i_seqv);
 
    // seqv data versions. each returns the number of bytes read
@@ -645,7 +647,7 @@ public:
 template<class byte_seqv> class data_seqv_writer_ptr_tpl : public data_seqv_writer_base_tpl<data_seqv_tpl<byte_seqv>*, ptr_adapter<data_seqv_tpl<byte_seqv>*>>
 {
 public:
-   data_seqv_writer_ptr_tpl() : data_seqv_writer_base_tpl(nullptr) {}
+   data_seqv_writer_ptr_tpl() : data_seqv_writer_base_tpl<std::shared_ptr<data_seqv_tpl<byte_seqv>>, ptr_adapter<std::shared_ptr<data_seqv_tpl<byte_seqv>>>>(nullptr) {}
    data_seqv_writer_ptr_tpl(data_seqv_tpl<byte_seqv>* i_seqv) :
       data_seqv_writer_base_tpl<data_seqv_tpl<byte_seqv>*, ptr_adapter<data_seqv_tpl<byte_seqv>*>>(i_seqv) { assert(i_seqv->is_writable()); }
    void set_data_sequence(data_seqv_tpl<byte_seqv>* i_seqv) { assert(i_seqv->is_writable()); this->seqv_v = i_seqv; }
@@ -716,7 +718,7 @@ public:
    data_seqv_writer_ptr_tpl<byte_seqv> w;
 
 protected:
-   /** reference only! */
+   /** weak reference only! */
    data_seqv_tpl<byte_seqv>* seqv_v = nullptr;
 };
 
@@ -1331,9 +1333,16 @@ template<class T, class reader> template<class T0> T0 data_seqv_reader_base_tpl<
 template<class T, class reader> std::string data_seqv_reader_base_tpl<T, reader>::read_line()
 {
    std::string text;
-   std::vector<char> line;
+   text.reserve(256);
+   read_line(text);
+
+   return text;
+}
+
+template<class T, class reader> void data_seqv_reader_base_tpl<T, reader>::read_line(std::string& o_text)
+{
    int8_t c = 0;
-   line.reserve(256);
+   o_text.clear();
 
    while (true)
    {
@@ -1344,15 +1353,8 @@ template<class T, class reader> std::string data_seqv_reader_base_tpl<T, reader>
          break;
       }
 
-      line.push_back(c);
+      o_text.push_back(c);
    }
-
-   if (!line.empty())
-   {
-      text = std::string(line.data(), line.size());
-   }
-
-   return text;
 }
 
 template<class T, class reader> template<class T0> void data_seqv_reader_base_tpl<T, reader>::read_pointer(T0*& i_seqv)
